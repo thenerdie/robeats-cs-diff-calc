@@ -36,69 +36,66 @@ function collectCohesions(hitObjects) {
     return cohesions
 }
 
-function calculateDifficulty(hitObjects) {
-    // let streamStrains = []
+function splitCohesionsIntoSeconds(cohesions) {
+    let seconds = []
+    let thisSecond = []
+
+    let thisSecondStart = cohesions[0].Time
+    let index = 0
+
+    for (let cohesion of cohesions) {
+        if (cohesion.Time - thisSecondStart <= 1000) {
+            thisSecond.push(cohesion)
+        } else {
+            index++
+            thisSecondStart = cohesion.Time
+            seconds.push(thisSecond)
+            thisSecond = [ cohesion ]
+        }
+    }
+
+    return seconds
+}
+
+function calculateDifficulty(hitObjects, name) {
+    const line = "----"
+
+    let debug = [ name ]
 
     const cohesions = collectCohesions(hitObjects)
+    const seconds = splitCohesionsIntoSeconds(cohesions)
 
-    return chordjack.calculateChordjackDifficulty(cohesions)
+    let sectionDfficulties = []
 
-    // let strains = []
+    for (let second of seconds.slice().reverse()) {
+        let nps = constants.getNPS(second)
 
-    // cohesions.forEach((cohesion, i) => {
-    //     if (i != 0) {
-    //         const lastCohesion = cohesions[i - 1]
+        const diff = chordjack.calculateChordjackDifficulty(second)
 
-    //         const difference = cohesion.Time - lastCohesion.Time
+        sectionDfficulties.push(diff)
 
-    //         let buffs = []
+        debug.push(`${line} NPS: ${nps} / SECTION DIFFICULTY: ${diff} / BPM: ${constants.getBPMOfCohesions(second)}`)
 
-    //         for (let track of [0, 1, 2, 3]) {
-    //             if (lastCohesion.HitObjects[track] && cohesion.HitObjects[track]) {
-    //                 if (difference > 500) {
-    //                     anchorCount[track] = 0
-    //                 }
+        for (let cohesion of second.slice().reverse()) {
+            debug.push(constants.renderCohesion(cohesion))
+        }
+    }
 
-    //                 if (anchorCount[track] < letMaxAnchor)
-    //                     anchorCount[track]++
-                    
-    //                     const thisBuff = anchorBuff * (anchorCount[track] / letMaxAnchor)
+    const difficulty = constants.sortedAvg(sectionDfficulties)
 
-    //                     buffs.push(thisBuff)
-    //             }
-    //         }
+    debug.push("\n")
+    debug.push(difficulty)
 
-    //         const baseDifficulty = strainToDifficulty(difference)
+    fs.writeFileSync(`./debug/${name}.txt`, debug.join("\n"))
 
-    //         let avgBuff = 0
-
-    //         buffs.forEach(buff => {
-    //             avgBuff += buff
-    //         })
-
-    //         avgBuff /= buffs.length
-
-    //         strains.push(baseDifficulty)
-    //     }
-    // })
-
-    // let diff = 0
-
-    // strains.forEach(d => {
-    //     // console.log(d)
-
-    //     diff += d
-    // })
-
-    // return diff / strains.length
-
-    // return diff
+    return difficulty
 }
 
 const fs = require("fs")
+const { dir } = require("console")
 
 fs.readdirSync("./tests").forEach(dir => {
     const map = require(`./tests/${dir}`)
     
-    console.log(`${dir} ${calculateDifficulty(map.HitObjects).toFixed(2)}`)
+    console.log(`${dir} ${calculateDifficulty(map.HitObjects, dir).toFixed(2)}`)
 })

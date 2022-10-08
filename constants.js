@@ -31,12 +31,63 @@ module.exports.getCohesionType = cohesion => {
     return cohesionTypes[count - 1]
 }
 
+module.exports.getNPS = cohesions => {
+    let nps = 0
+
+    for (let cohesion of cohesions) {
+        nps += cohesion.HitObjects.filter(hitObject => hitObject == true).length
+    }
+
+    return nps
+}
+
+module.exports.avg = values => {
+    let fin = 0
+    values.forEach(value => fin += value)
+
+    return fin / values.length
+}
+
+module.exports.sortedAvg = values => {
+    return this.avg(values.sort((a, b) => b - a).slice(0, 35))
+}
+
+module.exports.getFingerCount = cohesions => {
+    let count = [ 0, 0, 0, 0 ]
+
+    cohesions.forEach(cohesion => {
+        cohesion.HitObjects.forEach((hitObject, i) => {
+            if (hitObject) {
+                count[i]++
+            }
+        })
+    })
+
+    return count
+}
+
 module.exports.renderCohesion = cohesion => {
     let render = ""
 
     cohesion.HitObjects.forEach(hitObject => {
-        render += hitObject ? "*" : "-"
+        render += hitObject ? "O" : " "
     });
 
     return render
+}
+
+module.exports.getBPMOfCohesions = cohesions => {
+    let differences = []
+
+    cohesions.forEach((cohesion, i) => {
+        if (i != 0) {
+            const prevCohesion = cohesions[i - 1]
+
+            const difference = cohesion.Time - prevCohesion.Time
+
+            differences.push(60000 / (difference * 4))
+        }
+    })
+
+    return this.avg(differences)
 }

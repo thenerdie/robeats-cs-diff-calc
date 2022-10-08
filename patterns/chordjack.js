@@ -1,55 +1,56 @@
 const constants = require("../constants")
 
 module.exports.calculateChordjackDifficulty = cohesions => {
-    let strains = []
-    
+    let npsBase = constants.getNPS(cohesions)
+
+    let bonusCount = 0
+
+    let minMultiplier = 0.75
+    let maxMultiplier = 1.08
+
+    const fingerCount = constants.getFingerCount(cohesions)
+
     let lastCohesion
-    
-    let minAnchor = 4
-    let maxAnchor = 25
-    let anchorBuff = 1.1
 
-    let consecutiveAnchors = 0
-    let consecutiveAnchorsBuff = 1.007
+    let jackRatio = cohesions.filter(cohesion => ["Quad", "Chord", "Jump"].find(c => c == cohesion.Type)).length / cohesions.length
+    let quadRatio = cohesions.filter(cohesion => cohesion.Type == "Quad").length / cohesions.length
 
-    let ohBuff = 1.07
+    if (quadRatio >= 0.8 || jackRatio < 0.3) {
+        return npsBase * minMultiplier
+    }
 
     for (let cohesion of cohesions) {    
         if (!lastCohesion || cohesion.Type !== "Chord" && lastCohesion.Type !== "Chord") {
             lastCohesion = cohesion
             continue
         }
-        
-        const difference = cohesion.Time - lastCohesion.Time
-        let difficulty = constants.strainToDifficulty(difference)
 
-        const inCommon = constants.findColumnsInCommon(cohesion, lastCohesion)
+        let inCommon = constants.findColumnsInCommon(cohesion, lastCohesion)
 
-        if (inCommon.length > 1) {
-            if (consecutiveAnchors >= minAnchor)
-                difficulty *= Math.pow(anchorBuff, inCommon.length) * Math.pow(consecutiveAnchorsBuff, consecutiveAnchors)
+        // console.log(`${constants.renderCohesion(cohesion)}\n${constants.renderCohesion(lastCohesion)}, ${inCommon}\n`)
 
-            if (cohesion.HitObjects[0] && cohesion.HitObjects[1] || cohesion.HitObjects[2] && cohesion.HitObjects[3]) {
-                difficulty *= ohBuff
-            }
+        // detects double-hand-anchored patterns (ahem far in the blue sky)
 
-            consecutiveAnchors = Math.min(maxAnchor, consecutiveAnchors + 1)
-        } else {
-            consecutiveAnchors = 0
+        // o o
+        // ooo
+        // o oo
+        // oo o
+
+        // see the anchor on columns 1 and 3?
+
+        if (inCommon.length >= 2 && (inCommon.includes(1) || inCommon.includes(2)) && (inCommon.includes(3) || inCommon.includes(4))) {
+            bonusCount += 1
         }
 
-        // console.log(cohesion.Type, constants.renderCohesion(cohesion))
-
-        strains.push(difficulty)
-        
         lastCohesion = cohesion
     }
 
-    let difficulty = 0
+    let multiplier = (bonusCount / cohesions.length) + 1
 
-    strains.forEach(strain => {
-        difficulty += strain
-    })
+    const finalMultiplier = Math.max(Math.min(maxMultiplier, multiplier), minMultiplier)
+    // const finalMultiplier = 1
 
-    return difficulty / strains.length
+    // console.log(finalMultiplier)
+
+    return npsBase * finalMultiplier
 }
