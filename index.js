@@ -1,8 +1,12 @@
 const constants = require("./constants")
 
-const chordjack = require("./patterns/chordjack")
+const { detectPatterns } = require("./patterns/detect")
+
+// const chordjack = require("./patterns/chordjack")
 
 const maxMs = 500
+
+const SCALE_FACTOR = 4.5
 
 function collectCohesions(hitObjects) {
     let cohesions = []
@@ -57,10 +61,17 @@ function splitCohesionsIntoSeconds(cohesions) {
     return seconds
 }
 
-function calculateDifficulty(hitObjects, name) {
+function calculateDifficulty(hitObjects, rate, name) {
     const line = "----"
 
     let debug = [ name ]
+
+    hitObjects.forEach(hitObject => {
+        hitObject.Time /= rate
+
+        if (hitObject.Duration)
+            hitObject.Duration /= rate
+    });
 
     const cohesions = collectCohesions(hitObjects)
     const seconds = splitCohesionsIntoSeconds(cohesions)
@@ -70,11 +81,11 @@ function calculateDifficulty(hitObjects, name) {
     for (let second of seconds.slice().reverse()) {
         let nps = constants.getNPS(second)
 
-        const diff = chordjack.calculateChordjackDifficulty(second)
+        const diff = nps / SCALE_FACTOR
 
         sectionDfficulties.push(diff)
 
-        debug.push(`${line} NPS: ${nps} / SECTION DIFFICULTY: ${diff} / BPM: ${constants.getBPMOfCohesions(second)}`)
+        debug.push(`${line} NPS: ${nps}`)
 
         for (let cohesion of second.slice().reverse()) {
             debug.push(constants.renderCohesion(cohesion))
@@ -97,5 +108,5 @@ const { dir } = require("console")
 fs.readdirSync("./tests").forEach(dir => {
     const map = require(`./tests/${dir}`)
     
-    console.log(`${dir} ${calculateDifficulty(map.HitObjects, dir).toFixed(2)}`)
+    console.log(`${dir} ${calculateDifficulty(map.HitObjects, 1, dir).toFixed(2)}`)
 })
