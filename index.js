@@ -6,7 +6,7 @@ const { detectPatterns } = require("./patterns/detect")
 
 const maxMs = 500
 
-const SCALE_FACTOR = 4.5
+const SCALE_FACTOR = 4
 
 function collectCohesions(hitObjects) {
     let cohesions = []
@@ -81,7 +81,7 @@ function calculateDifficulty(hitObjects, rate, name) {
     for (let second of seconds.slice().reverse()) {
         let nps = constants.getNPS(second)
 
-        const diff = nps / SCALE_FACTOR
+        const diff = nps
 
         sectionDfficulties.push(diff)
 
@@ -99,7 +99,7 @@ function calculateDifficulty(hitObjects, rate, name) {
 
     fs.writeFileSync(`./debug/${name}.txt`, debug.join("\n"))
 
-    return difficulty
+    return difficulty / SCALE_FACTOR
 }
 
 const fs = require("fs")
@@ -108,5 +108,5 @@ const { dir } = require("console")
 fs.readdirSync("./tests").forEach(dir => {
     const map = require(`./tests/${dir}`)
     
-    console.log(`${dir} ${calculateDifficulty(map.HitObjects, 1, dir).toFixed(2)}`)
+    console.log(`${dir} ${calculateDifficulty(map.HitObjects, 1, dir).toFixed(2)}*`)
 })
